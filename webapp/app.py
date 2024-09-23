@@ -23,7 +23,7 @@ def dashboard():
         r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
         accounts = r.json()
     except Exception as e:
-        return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
+        return 'Make sure you authenticate first then visit this page. <a href="https://43.204.143.46:5055">Log in</a>'
 
     account = accounts[0]
 
