@@ -1,5 +1,6 @@
-import requests, time, os
+import requests, time, os, json
 from flask import Flask, render_template, request, redirect
+from pprint import pprint
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -12,6 +13,14 @@ os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
 
+SYMBOL_TO_CONTRACTID_MAP = {
+    'GOOG': 208813720,
+    'NIFTY': 51497778,
+    'ADANIENT': 56986798,
+    'AAPL': 265598,
+}
+
+
 @app.template_filter('ctime')
 def timectime(s):
     return time.ctime(s/1000)
@@ -23,7 +32,7 @@ def dashboard():
         r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
         accounts = r.json()
     except Exception as e:
-        return 'Make sure you authenticate first then visit this page. <a href="https://43.204.143.46:5055">Log in</a>'
+        return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
 
     account = accounts[0]
 
@@ -170,3 +179,44 @@ def scanner():
         scan_results = r.json()
 
     return render_template("scanner.html", params=params, scanner_map=scanner_map, filter_map=filter_map, scan_results=scan_results)
+
+
+@app.route("/tvwebhook", methods=['GET', 'POST'])
+def tvwebhook():
+    try:
+        data = json.loads(request.data)
+
+    except Exception as err:
+        return err, 400
+
+    ticker = data.get('ticker')
+    spot_price = data.get('price')
+    qty = abs(data.get('quantity', 0))
+    alert_message = data.get('alert_message')
+    side = 'BUY' if 'entry' in alert_message else 'SELL'
+
+    session = requests.Session()
+    session.verify = False
+
+    r = session.get(f"{BASE_API_URL}/portfolio/accounts")
+    response = r.json()
+    account_id = response[0]['id']
+
+    contract_id = SYMBOL_TO_CONTRACTID_MAP.get(ticker, 208813720)
+    data = {
+        "orders": [
+            {
+                "conid": contract_id,
+                "orderType": "MKT",
+                # "price": 20.00,
+                "quantity": qty,
+                "side": side,
+                "tif": "GTC"
+            }
+        ]
+    }
+
+    r = session.post(
+        f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
+    pprint(r.json())
+    return r.json()
