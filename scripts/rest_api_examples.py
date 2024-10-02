@@ -5,7 +5,7 @@ from pprint import pprint
 from requests.packages.urllib3.exceptions import InsecureRequestWarning # type: ignore
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-BASE_API_URL = "https://localhost:5055/v1/api"
+BASE_API_URL = "http://localhost:5055/v1/api"
 
 session = requests.Session()
 session.verify = False

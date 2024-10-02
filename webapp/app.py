@@ -1,13 +1,14 @@
 import requests, time, os, json
 from flask import Flask, render_template, request, redirect
 from pprint import pprint
+import traceback
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-BASE_API_URL = "https://localhost:5055/v1/api"
-ACCOUNT_ID = os.environ['IBKR_ACCOUNT_ID']
+BASE_API_URL = "http://localhost:5055/v1/api"
+ACCOUNT_ID = "DUA732142"
 
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
@@ -18,6 +19,7 @@ SYMBOL_TO_CONTRACTID_MAP = {
     'NIFTY': 51497778,
     'ADANIENT': 56986798,
     'AAPL': 265598,
+    'NQ1!': 11004958,
 }
 
 
@@ -32,13 +34,16 @@ def dashboard():
         r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
         accounts = r.json()
     except Exception as e:
-        return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
+        return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5055">Log in</a>'
 
     account = accounts[0]
 
     account_id = accounts[0]["id"]
-    r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/summary", verify=False)
-    summary = r.json()
+    try:
+        r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/summary", verify=False)
+        summary = r.json()
+    except Exception as e:
+        summary = {'totalcashvalue': {'amount':0}}
     
     return render_template("dashboard.html", account=account, summary=summary)
 
@@ -113,8 +118,11 @@ def cancel_order(order_id):
 
 @app.route("/portfolio")
 def portfolio():
-    r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
-    positions = r.json()
+    try:
+        r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
+        positions = r.json()
+    except Exception as e:
+        positions = []
 
     # return my positions, how much cash i have in this account
     return render_template("portfolio.html", positions=positions)
