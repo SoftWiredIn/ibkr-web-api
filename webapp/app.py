@@ -1,4 +1,7 @@
-import requests, time, os, json
+import requests
+import time
+import os
+import json
 from flask import Flask, render_template, request, redirect, url_for
 from pprint import pprint
 import traceback
@@ -42,8 +45,8 @@ SYMBOL_TO_CONTRACTID_MAP = {
     'NVDA': 4815747,
     'TSLA': 76792991,
     'BTCUSD': 509872400,
-    'USDJPY': 36165891,
-    'NQ1!': 11004958,
+    'USDJPY': 15016059,
+    'BTCUSD': 479624278,
 }
 
 session = requests.Session()
@@ -54,8 +57,6 @@ session.get(f"{BASE_API_URL}")
 @app.template_filter('ctime')
 def timectime(s):
     return time.ctime(s/1000)
-
-
 
 
 @app.route("/")
@@ -74,7 +75,7 @@ def dashboard():
         r = session.get(f"{BASE_API_URL}/portfolio/{account_id}/summary")
         summary = r.json()
     except Exception as e:
-        summary = {'totalcashvalue': {'amount':0}}
+        summary = {'totalcashvalue': {'amount': 0}}
 
     message_template = ALERT_TEMPLATE.format(secret='784gfdgs2')
 
@@ -87,7 +88,8 @@ def lookup():
     stocks = []
 
     if symbol is not None:
-        r = requests.get(f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
+        r = requests.get(
+            f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
 
         response = r.json()
         stocks = response
@@ -102,11 +104,12 @@ def contract(contract_id, period='5d', bar='1d'):
             contract_id
         ]
     }
-    
+
     r = requests.post(f"{BASE_API_URL}/trsrv/secdef", data=data, verify=False)
     contract = r.json()['secdef'][0]
 
-    r = requests.get(f"{BASE_API_URL}/iserver/marketdata/history?conid={contract_id}&period={period}&bar={bar}", verify=False)
+    r = requests.get(
+        f"{BASE_API_URL}/iserver/marketdata/history?conid={contract_id}&period={period}&bar={bar}", verify=False)
     price_history = r.json()
 
     return render_template("contract.html", price_history=price_history, contract=contract)
@@ -115,9 +118,14 @@ def contract(contract_id, period='5d', bar='1d'):
 @app.route("/orders")
 def orders():
     r = requests.get(f"{BASE_API_URL}/iserver/account/orders", verify=False)
-    print(r.content)
+    # print(r.content)
     orders = r.json()["orders"]
-    
+
+    for order in orders:
+        order['execTime'] = timectime(order['lastExecutionTime_r'])
+
+    orders = sorted(orders, key=lambda order: order['execTime'], reverse=True)
+
     # place order code
     return render_template("orders.html", orders=orders)
 
@@ -137,13 +145,15 @@ def place_order():
         ]
     }
 
-    r = requests.post(f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/orders", json=data, verify=False)
+    r = requests.post(
+        f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/orders", json=data, verify=False)
 
     return redirect("/orders")
 
+
 @app.route("/orders/<order_id>/cancel")
 def cancel_order(order_id):
-    cancel_url = f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/order/{order_id}" 
+    cancel_url = f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/order/{order_id}"
     r = requests.delete(cancel_url, verify=False)
 
     return r.json()
@@ -152,7 +162,8 @@ def cancel_order(order_id):
 @app.route("/portfolio")
 def portfolio():
     try:
-        r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
+        r = requests.get(
+            f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
         positions = r.json()
     except Exception as e:
         positions = []
@@ -193,7 +204,6 @@ def scanner():
     for item in params['location_tree']:
         scanner_map[item['type']]['locations'] = item['locations']
 
-
     submitted = request.args.get("submitted", "")
     selected_instrument = request.args.get("instrument", "")
     location = request.args.get("location", "")
@@ -215,8 +225,9 @@ def scanner():
                 }
             ]
         }
-            
-        r = requests.post(f"{BASE_API_URL}/iserver/scanner/run", json=data, verify=False)
+
+        r = requests.post(
+            f"{BASE_API_URL}/iserver/scanner/run", json=data, verify=False)
         scan_results = r.json()
 
     return render_template("scanner.html", params=params, scanner_map=scanner_map, filter_map=filter_map, scan_results=scan_results)
@@ -246,19 +257,24 @@ def tvwebhook():
                     "conid": contract_id,
                     "orderType": "MKT",
                     # "price": 20.00,
-                    "quantity": qty,
+                    # "quantity": qty,
                     "side": side,
-                    "tif": "GTC"
+                    "tif": "IOC"
                 }
             ]
         }
+
+        if ticker in ['BTCUSD']:
+            data["orders"][0]['cashQty'] = qty
+        else:
+            data["orders"][0]['quantity'] = qty
 
         r = session.post(
             f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
         pprint(r.json())
 
     except Exception as err:
+        print(f"{err}")
         return f"{err}"
 
-    
     return r.json()

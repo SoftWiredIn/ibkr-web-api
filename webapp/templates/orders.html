@@ -6,34 +6,38 @@
 
 <table class="table table-striped">
     <tr>
+        <th>Time</th>
         <th>Order ID</th>
         <th>Ticker</th>
-        <th>Description</th>
-        <th>Company</th>
-        <th>Order Description</th>
+        <th>Quantity</th>
+        <th>Price</th>
         <th>Order Type</th>
+        <th>Side</th>
         <th>Status</th>
         <th>Cancel</th>
     </tr>
     {% for order in orders %}
     <tr>
         <td>
-            {{ order.orderId }}
+            {{ order.execTime }}
         </td>
         <td>
-            {{ order.ticker }}
+            {{ order.orderId }}
         </td>
         <td>
             {{ order.description1 }}
         </td>
         <td>
-            {{ order.companyName }}
+            {{ order.sizeAndFills }}
         </td>
         <td>
-            {{ order.orderDesc }}
+            {{ order.avgPrice }}
         </td>
         <td>
             {{ order.orderType }}
+        </td>
+        <td>
+            {{ order.side }}
         </td>
         <td>
             {{ order.status }}   
