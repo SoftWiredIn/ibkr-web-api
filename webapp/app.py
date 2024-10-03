@@ -11,6 +11,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 BASE_API_URL = "http://localhost:5055/v1/api"
 ACCOUNT_ID = "DUA732142"
 ALERT_TEMPLATE = '''{{
+    "secret": "{secret}",
     "ticker": "{{{{ticker}}}}",
     "price": {{{{strategy.order.price}}}},
     "quantity": {{{{strategy.order.contracts}}}},
@@ -74,8 +75,10 @@ def dashboard():
         summary = r.json()
     except Exception as e:
         summary = {'totalcashvalue': {'amount':0}}
-    
-    return render_template("dashboard.html", account=account, summary=summary, account_id=account_id, webhook_url=WEBHOOK_URL, message_template=ALERT_TEMPLATE)
+
+    message_template = ALERT_TEMPLATE.format(secret='784gfdgs2')
+
+    return render_template("dashboard.html", account=account, summary=summary, account_id=account_id, webhook_url=WEBHOOK_URL, message_template=message_template)
 
 
 @app.route("/lookup")
