@@ -2,6 +2,7 @@ import requests, time, os, json
 from flask import Flask, render_template, request, redirect, url_for
 from pprint import pprint
 import traceback
+from pyngrok import ngrok
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -16,7 +17,16 @@ ALERT_TEMPLATE = '''{{
     "alert_message": "{{{{strategy.order.alert_message}}}}"
 }}'''
 
-WEBHOOK_URL = 'test'
+WEBHOOK_URL_SET = False
+WEBHOOK_URL = ''
+try:
+    if not WEBHOOK_URL_SET:
+        public_url = ngrok.connect(5056)
+        WEBHOOK_URL = f'{public_url.public_url}/tvwebhook'
+        WEBHOOK_URL_SET = True
+
+except:
+    pass
 
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
@@ -27,6 +37,11 @@ SYMBOL_TO_CONTRACTID_MAP = {
     'NIFTY': 51497778,
     'ADANIENT': 56986798,
     'AAPL': 265598,
+    'NQ1!': 11004958,
+    'NVDA': 4815747,
+    'TSLA': 76792991,
+    'BTCUSD': 509872400,
+    'USDJPY': 36165891,
     'NQ1!': 11004958,
 }
 
