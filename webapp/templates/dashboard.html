@@ -7,6 +7,14 @@
 <table class="table table-striped">
     <tr>
         <td>
+            ACCOUNT_ID
+        </td>
+        <td>
+            {{ account_id }}
+        </td>
+    </tr>
+    <tr>
+        <td>
             Currency
         </td>
         <td>
@@ -38,5 +46,28 @@
         </td>
     </tr>
 </table>
+
+<form id="webhook-url-form" class="webhook-url-form">
+    <div class="form-row">
+        <div class="form-group col-md-10 row mx-auto">
+            <label for="webhook-url" class="col-sm-3 col-form-label">Tradingview Webhook URL</label>
+            <input type="text" id="webhook-url" class="col-sm-8 form-control" value="{{ webhook_url }}" readonly>
+        </div>
+        <div class="form-group col-md-2 row mx-auto">
+            <button type="button" class="btn btn-primary" onclick="copyToClipboard('webhook-url')">Copy URL</button>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-10 row mx-auto">
+            <label for="message-template" class="col-sm-3 col-form-label">Message Template</label>
+            <textarea id="message-template" class="col-sm-8 form-control" readonly
+                rows="5">{{ message_template }}</textarea>
+        </div>
+        <div class="form-group col-md-2 row mx-auto">
+            <button type="button" class="btn btn-primary" onclick="copyToClipboard('message-template')">Copy
+                Template</button>
+        </div>
+    </div>
+</form>
 
 {% endblock %}

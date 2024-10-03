@@ -1,5 +1,5 @@
 import requests, time, os, json
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 from pprint import pprint
 import traceback
 
@@ -9,6 +9,14 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 BASE_API_URL = "http://localhost:5055/v1/api"
 ACCOUNT_ID = "DUA732142"
+ALERT_TEMPLATE = '''{{
+    "ticker": "{{{{ticker}}}}",
+    "price": {{{{strategy.order.price}}}},
+    "quantity": {{{{strategy.order.contracts}}}},
+    "alert_message": "{{{{strategy.order.alert_message}}}}"
+}}'''
+
+WEBHOOK_URL = 'test'
 
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
@@ -22,30 +30,37 @@ SYMBOL_TO_CONTRACTID_MAP = {
     'NQ1!': 11004958,
 }
 
+session = requests.Session()
+session.verify = False
+session.get(f"{BASE_API_URL}")
+
 
 @app.template_filter('ctime')
 def timectime(s):
     return time.ctime(s/1000)
 
 
+
+
 @app.route("/")
 def dashboard():
+    global ACCOUNT_ID
     try:
-        r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
+        r = session.get(f"{BASE_API_URL}/portfolio/accounts")
         accounts = r.json()
     except Exception as e:
         return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5055">Log in</a>'
 
     account = accounts[0]
 
-    account_id = accounts[0]["id"]
+    ACCOUNT_ID = account_id = accounts[0]["id"]
     try:
-        r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/summary", verify=False)
+        r = session.get(f"{BASE_API_URL}/portfolio/{account_id}/summary")
         summary = r.json()
     except Exception as e:
         summary = {'totalcashvalue': {'amount':0}}
     
-    return render_template("dashboard.html", account=account, summary=summary)
+    return render_template("dashboard.html", account=account, summary=summary, account_id=account_id, webhook_url=WEBHOOK_URL, message_template=ALERT_TEMPLATE)
 
 
 @app.route("/lookup")
@@ -193,38 +208,39 @@ def scanner():
 def tvwebhook():
     try:
         data = json.loads(request.data)
+        ticker = data.get('ticker')
+        spot_price = data.get('price')
+        qty = abs(data.get('quantity', 0))
+        alert_message = data.get('alert_message')
+        side = 'BUY' if 'entry' in alert_message else 'SELL'
+
+        session = requests.Session()
+        session.verify = False
+
+        r = session.get(f"{BASE_API_URL}/portfolio/accounts")
+        response = r.json()
+        account_id = response[0]['id']
+
+        contract_id = SYMBOL_TO_CONTRACTID_MAP.get(ticker, 208813720)
+        data = {
+            "orders": [
+                {
+                    "conid": contract_id,
+                    "orderType": "MKT",
+                    # "price": 20.00,
+                    "quantity": qty,
+                    "side": side,
+                    "tif": "GTC"
+                }
+            ]
+        }
+
+        r = session.post(
+            f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
+        pprint(r.json())
 
     except Exception as err:
         return err, 400
 
-    ticker = data.get('ticker')
-    spot_price = data.get('price')
-    qty = abs(data.get('quantity', 0))
-    alert_message = data.get('alert_message')
-    side = 'BUY' if 'entry' in alert_message else 'SELL'
-
-    session = requests.Session()
-    session.verify = False
-
-    r = session.get(f"{BASE_API_URL}/portfolio/accounts")
-    response = r.json()
-    account_id = response[0]['id']
-
-    contract_id = SYMBOL_TO_CONTRACTID_MAP.get(ticker, 208813720)
-    data = {
-        "orders": [
-            {
-                "conid": contract_id,
-                "orderType": "MKT",
-                # "price": 20.00,
-                "quantity": qty,
-                "side": side,
-                "tif": "GTC"
-            }
-        ]
-    }
-
-    r = session.post(
-        f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
-    pprint(r.json())
+    
     return r.json()
