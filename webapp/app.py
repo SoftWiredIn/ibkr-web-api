@@ -240,7 +240,7 @@ def tvwebhook():
         pprint(r.json())
 
     except Exception as err:
-        return err, 400
+        return f"{err}"
 
     
     return r.json()
