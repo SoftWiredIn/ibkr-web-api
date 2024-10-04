@@ -11,7 +11,7 @@ from pyngrok import ngrok
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-BASE_API_URL = "http://localhost:5055/v1/api"
+BASE_API_URL = "http://localhost:5000/v1/api"
 ACCOUNT_ID = "DUA732142"
 ALERT_TEMPLATE = '''{{
     "secret": "{secret}",
@@ -66,7 +66,7 @@ def dashboard():
         r = session.get(f"{BASE_API_URL}/portfolio/accounts")
         accounts = r.json()
     except Exception as e:
-        return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5055">Log in</a>'
+        return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5000">Log in</a>'
 
     account = accounts[0]
 
@@ -75,7 +75,7 @@ def dashboard():
         r = session.get(f"{BASE_API_URL}/portfolio/{account_id}/summary")
         summary = r.json()
     except Exception as e:
-        summary = {'totalcashvalue': {'amount': 0}}
+        summary = {'totalcashvalue': {'amount': 0, 'currency': ''}}
 
     message_template = ALERT_TEMPLATE.format(secret='784gfdgs2')
 

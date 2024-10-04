@@ -32,7 +32,7 @@ ADD scripts scripts
 # RUN cp cacert.pem webapp/cacert.pem
 
 # Expose the port so we can connect
-EXPOSE 5055 5056
+EXPOSE 5000 5056
 
 # Run the gateway
 CMD sh ./start.sh

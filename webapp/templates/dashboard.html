@@ -42,7 +42,7 @@
             Cash
         </td>
         <td>
-            ${{ summary['totalcashvalue']['amount']|round(2) }}<br />
+            {{ summary['totalcashvalue']['currency'] }} {{ summary['totalcashvalue']['amount']|round(2) }}<br />
         </td>
     </tr>
 </table>

@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   web:
     build: .
@@ -7,7 +6,7 @@ services:
     environment:
       IBKR_ACCOUNT_ID: "DUA732142"
     ports:
-      - "5055:5055"
+      - "5000:5000"
       - "5056:5056"
     volumes:
       - ./webapp:/app/webapp
