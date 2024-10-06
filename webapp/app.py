@@ -44,9 +44,8 @@ SYMBOL_TO_CONTRACTID_MAP = {
     'NQ1!': 11004958,
     'NVDA': 4815747,
     'TSLA': 76792991,
-    'BTCUSD': 509872400,
-    'USDJPY': 15016059,
     'BTCUSD': 479624278,
+    'USDJPY': 15016059,
 }
 
 session = requests.Session()
@@ -271,6 +270,7 @@ def tvwebhook():
 
         r = session.post(
             f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
+        pprint(r.text)
         pprint(r.json())
 
     except Exception as err:
