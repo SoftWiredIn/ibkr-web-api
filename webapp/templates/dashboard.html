@@ -45,6 +45,14 @@
             {{ summary['totalcashvalue']['currency'] }} {{ summary['totalcashvalue']['amount']|round(2) }}<br />
         </td>
     </tr>
+    <tr>
+        <td>
+            Status
+        </td>
+        <td>
+            {{ authStatus }}<br />
+        </td>
+    </tr>
 </table>
 
 <form id="webhook-url-form" class="webhook-url-form">

@@ -64,12 +64,16 @@ def dashboard():
     try:
         r = session.get(f"{BASE_API_URL}/portfolio/accounts")
         accounts = r.json()
+        account = accounts[0] if len(accounts) else {}
+
+        ACCOUNT_ID = account_id = account.get("id", None)
+
+        r = session.get(f"{BASE_API_URL}/iserver/auth/status")
+        authStatus = r.json()
     except Exception as e:
         return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5000">Log in</a>'
 
-    account = accounts[0]
-
-    ACCOUNT_ID = account_id = accounts[0]["id"]
+    
     try:
         r = session.get(f"{BASE_API_URL}/portfolio/{account_id}/summary")
         summary = r.json()
@@ -78,7 +82,7 @@ def dashboard():
 
     message_template = ALERT_TEMPLATE.format(secret='784gfdgs2')
 
-    return render_template("dashboard.html", account=account, summary=summary, account_id=account_id, webhook_url=WEBHOOK_URL, message_template=message_template)
+    return render_template("dashboard.html", account=account, summary=summary, account_id=account_id, webhook_url=WEBHOOK_URL, message_template=message_template, authStatus=authStatus)
 
 
 @app.route("/lookup")
@@ -116,14 +120,22 @@ def contract(contract_id, period='5d', bar='1d'):
 
 @app.route("/orders")
 def orders():
-    r = requests.get(f"{BASE_API_URL}/iserver/account/orders", verify=False)
-    # print(r.content)
-    orders = r.json()["orders"]
+    try:
+        r = requests.get(
+            f"{BASE_API_URL}/iserver/account/orders", verify=False)
+        orders = r.json()["orders"]
 
-    for order in orders:
-        order['execTime'] = timectime(order['lastExecutionTime_r'])
+        for order in orders:
+            order['execTime'] = timectime(order['lastExecutionTime_r'])
 
-    orders = sorted(orders, key=lambda order: order['execTime'], reverse=True)
+        orders = sorted(
+            orders, key=lambda order: order['execTime'], reverse=True)
+
+    except:
+        orders = []
+        import traceback
+        print(r.text)
+        print(traceback.format_exc())
 
     # place order code
     return render_template("orders.html", orders=orders)
