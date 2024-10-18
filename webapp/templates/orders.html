@@ -6,7 +6,8 @@
 
 <table class="table table-striped">
     <tr>
-        <th>Time</th>
+        <th>TV Time</th>
+        <th>IBKR Time</th>
         <th>Order ID</th>
         <th>Ticker</th>
         <th>Quantity</th>
@@ -19,13 +20,16 @@
     {% for order in orders %}
     <tr>
         <td>
+            {{ order.tvTime }}
+        </td>
+        <td>
             {{ order.execTime }}
         </td>
         <td>
             {{ order.orderId }}
         </td>
         <td>
-            {{ order.description1 }}
+            {{ order.orderDesc }}
         </td>
         <td>
             {{ order.sizeAndFills }}

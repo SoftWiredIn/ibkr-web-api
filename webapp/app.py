@@ -3,9 +3,12 @@ import time
 import os
 import json
 from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 from pprint import pprint
 import traceback
 from pyngrok import ngrok
+from datetime import datetime
+import pytz
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -18,7 +21,8 @@ ALERT_TEMPLATE = '''{{
     "ticker": "{{{{ticker}}}}",
     "price": {{{{strategy.order.price}}}},
     "quantity": {{{{strategy.order.contracts}}}},
-    "alert_message": "{{{{strategy.order.alert_message}}}}"
+    "alert_message": "{{{{strategy.order.alert_message}}}}",
+    "timenow": "{{{{timenow}}}}"
 }}'''
 
 WEBHOOK_URL_SET = False
@@ -35,17 +39,35 @@ except:
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
+db = SQLAlchemy()
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
+db.init_app(app)
+
+
+class Order(db.Model):
+    __tablename__ = 'orders'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    order_id = db.Column(db.String(30), nullable=False)
+    datetime = db.Column(db.DateTime, nullable=False)
+
+
+with app.app_context():
+    db.create_all()
 
 SYMBOL_TO_CONTRACTID_MAP = {
     'GOOG': 208813720,
     'NIFTY': 51497778,
     'ADANIENT': 56986798,
     'AAPL': 265598,
-    'NQ1!': 11004958,
+    'NQ1!': 563947733,
     'NVDA': 4815747,
     'TSLA': 76792991,
     'BTCUSD': 479624278,
     'USDJPY': 15016059,
+    'MBT1!': 699802811,
+    'MNQ1!': 654503320
 }
 
 session = requests.Session()
@@ -73,7 +95,6 @@ def dashboard():
     except Exception as e:
         return 'Make sure you authenticate first then visit this page. <a href="http://localhost:5000">Log in</a>'
 
-    
     try:
         r = session.get(f"{BASE_API_URL}/portfolio/{account_id}/summary")
         summary = r.json()
@@ -127,6 +148,9 @@ def orders():
 
         for order in orders:
             order['execTime'] = timectime(order['lastExecutionTime_r'])
+            order_in_db = Order.query.filter_by(
+                order_id=order['orderId']).first()
+            order['tvTime'] = order_in_db.datetime if order_in_db else '-'
 
         orders = sorted(
             orders, key=lambda order: order['execTime'], reverse=True)
@@ -253,6 +277,7 @@ def tvwebhook():
         qty = abs(data.get('quantity', 0))
         alert_message = data.get('alert_message')
         side = 'BUY' if 'entry' in alert_message else 'SELL'
+        timenow = data.get('timenow', '')
 
         session = requests.Session()
         session.verify = False
@@ -275,15 +300,33 @@ def tvwebhook():
             ]
         }
 
+        if ticker in ['NQ1!', 'MBT1!', 'MNQ1!']:
+            data["orders"][0]['tif'] = "GTC"
+
         if ticker in ['BTCUSD']:
-            data["orders"][0]['cashQty'] = qty
+            data["orders"][0]['cashQty'] = int(qty)
         else:
             data["orders"][0]['quantity'] = qty
 
         r = session.post(
             f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data)
         pprint(r.text)
-        pprint(r.json())
+        try:
+            orders = r.json()
+            pprint(orders)
+            utc_time = datetime.strptime(timenow, "%Y-%m-%dT%H:%M:%SZ")
+            utc_zone = pytz.utc
+            utc_time = utc_zone.localize(utc_time)
+            central_zone = pytz.timezone('America/Chicago')
+            houston_time = utc_time.astimezone(central_zone)
+
+            new_order = Order(
+                order_id=orders[0]['order_id'], datetime=houston_time)
+            db.session.add(new_order)
+            db.session.commit()
+
+        except Exception as e:
+            print(f"Can't create order in table due to {e}")
 
     except Exception as err:
         print(f"{err}")
